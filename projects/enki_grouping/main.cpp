@@ -71,7 +71,7 @@ public:
 int main(int argc, char *argv[]) {
 	QApplication app(argc, argv);
 
-	World world(500, 500, Color(30.0/255, 50.0/255, 70.0/255),  World::GroundTexture());
+	World world(500, 500, Color::gray,  World::GroundTexture());
 	EpuckTest viewer(&world);
 
 	viewer.show();
