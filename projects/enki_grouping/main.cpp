@@ -11,9 +11,7 @@ using namespace std;
 int force = 5;
 int low_velocity = 2 * force;
 int higth_velocity = 5 * force;
-int diff_robost = 1;
 int n_robots = 200;
-int n_partial_robots = n_robots / diff_robost;
 
 class EpuckTest : public ViewerWidget {
 protected:
@@ -21,7 +19,7 @@ protected:
 
 public:
 	EpuckTest(World *world, QWidget *parent = 0) : ViewerWidget(world, parent) {
-		initiaze_epucks(Color::green, n_partial_robots);
+		initiaze_epucks(Color::green, n_robots);
 	}
 
 	void initiaze_epucks(Color color, int n) {
