@@ -10,7 +10,7 @@ using namespace std;
 
 int force = 5;
 int lowVelocity = 2 * force;
-int higthVelocity = 5 * force;
+int highVelocity = 5 * force;
 int totalRobots = 200;
 
 class EpuckTest : public ViewerWidget {
@@ -27,7 +27,7 @@ public:
 			EPuck *epuck = new EPuck(EPuck::CAPABILITY_CAMERA);
 			epuck->pos = Point(UniformRand(0, 500)(), UniformRand(0, 500)());
 			epuck->leftSpeed = -lowVelocity;
-			epuck->rightSpeed = -higthVelocity;
+			epuck->rightSpeed = -highVelocity;
 			epuck->setColor(color);
 
 			epucks.push_back(epuck);
@@ -58,7 +58,7 @@ public:
 			} else {
 				epucks[i]->setColor(Color::green);
 				epucks[i]->leftSpeed = -lowVelocity;
-				epucks[i]->rightSpeed = -higthVelocity;
+				epucks[i]->rightSpeed = -highVelocity;
 			}
 		}
 
