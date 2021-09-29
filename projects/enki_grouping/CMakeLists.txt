@@ -11,7 +11,7 @@ if (Qt5Widgets_FOUND AND Qt5OpenGL_FOUND)
 
 	include_directories(${PROJECT_SOURCE_DIR})
 
-	add_executable(run ${viewer_playground_SRCS})
+	add_executable(enki_grouping ${viewer_playground_SRCS})
 
-	target_link_libraries(run enkiviewer enki ${OPENGL_gl_LIBRARY} ${EXTRA_LIBS} Qt5::OpenGL Qt5::Widgets)
+	target_link_libraries(enki_grouping enkiviewer enki ${OPENGL_gl_LIBRARY} ${EXTRA_LIBS} Qt5::OpenGL Qt5::Widgets)
 endif ()

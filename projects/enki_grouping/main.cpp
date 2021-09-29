@@ -9,9 +9,9 @@ using namespace Enki;
 using namespace std;
 
 int force = 5;
-int low_velocity = 2 * force;
-int higth_velocity = 5 * force;
-int n_robots = 200;
+int lowVelocity = 2 * force;
+int higthVelocity = 5 * force;
+int totalRobots = 200;
 
 class EpuckTest : public ViewerWidget {
 protected:
@@ -19,15 +19,15 @@ protected:
 
 public:
 	EpuckTest(World *world, QWidget *parent = 0) : ViewerWidget(world, parent) {
-		initiaze_epucks(Color::green, n_robots);
+		initiazeEpucks(Color::green, totalRobots);
 	}
 
-	void initiaze_epucks(Color color, int n) {
+	void initiazeEpucks(Color color, int n) {
 		for (int i = 0; i < n; ++i) {
 			EPuck *epuck = new EPuck(EPuck::CAPABILITY_CAMERA);
 			epuck->pos = Point(UniformRand(0, 500)(), UniformRand(0, 500)());
-			epuck->leftSpeed = -low_velocity;
-			epuck->rightSpeed = -higth_velocity;
+			epuck->leftSpeed = -lowVelocity;
+			epuck->rightSpeed = -higthVelocity;
 			epuck->setColor(color);
 
 			epucks.push_back(epuck);
@@ -40,25 +40,25 @@ public:
 	virtual void timerEvent(QTimerEvent * event) {
 		static int fireCounter = 0;
 
-		bool see_robot = false;
+		bool seeingAnotherRobot = false;
 
-		for (int i = 0; i < n_robots; ++i) {
-			see_robot = false;
+		for (int i = 0; i < totalRobots; ++i) {
+			seeingAnotherRobot = false;
 
-			for (int j=0; !see_robot && j < epucks[i]->camera.image.size(); j++) {
+			for (int j=0; !seeingAnotherRobot && j < epucks[i]->camera.image.size(); j++) {
 				if (epucks[i]->camera.image[j] == Color::green || epucks[i]->camera.image[j] == Color::red) {
-					see_robot = true;
+					seeingAnotherRobot = true;
 				}
 			}
 
-			if (see_robot) {
+			if (seeingAnotherRobot) {
 				epucks[i]->setColor(Color::red);
-				epucks[i]->leftSpeed = low_velocity;
-				epucks[i]->rightSpeed = -low_velocity;
+				epucks[i]->leftSpeed = lowVelocity;
+				epucks[i]->rightSpeed = -lowVelocity;
 			} else {
 				epucks[i]->setColor(Color::green);
-				epucks[i]->leftSpeed = -low_velocity;
-				epucks[i]->rightSpeed = -higth_velocity;
+				epucks[i]->leftSpeed = -lowVelocity;
+				epucks[i]->rightSpeed = -higthVelocity;
 			}
 		}
 

@@ -1,1 +1,1 @@
-./build/projects/$1/run
+./build/projects/$1/$1
