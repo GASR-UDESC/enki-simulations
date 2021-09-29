@@ -10,7 +10,7 @@ using namespace std;
 
 int force = 5;
 int lowVelocity = 2 * force;
-int higthVelocity = 5 * force;
+int highVelocity = 5 * force;
 int batchRobotsSize = 100;
 int totalRobots = 0;
 
@@ -32,7 +32,7 @@ public:
 			EPuck *epuck = new EPuck(EPuck::CAPABILITY_CAMERA);
 			epuck->pos = Point(UniformRand(0, 500)(), UniformRand(0, 500)());
 			epuck->leftSpeed = -lowVelocity;
-			epuck->rightSpeed = -higthVelocity;
+			epuck->rightSpeed = -highVelocity;
 			epuck->setColor(color);
 
 			epucks.push_back(epuck);
@@ -63,7 +63,7 @@ public:
 				epucks[i]->rightSpeed = -lowVelocity;
 			} else {
 				epucks[i]->leftSpeed = -lowVelocity;
-				epucks[i]->rightSpeed = -higthVelocity;
+				epucks[i]->rightSpeed = -highVelocity;
 			}
 		}
 
