@@ -8,4 +8,4 @@ compile:
 	./scripts/compile.sh
 
 run:
-	./scripts/run.sh $(run_file)
+	./build/projects/$(run_file)/run.sh
