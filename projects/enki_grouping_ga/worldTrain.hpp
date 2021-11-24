@@ -7,6 +7,7 @@ class NoViewerMode {
 	private:
 		int batchRobotsSize;
     int totalRobots;
+    int time_solution;
     int world_width;
     int world_height;
     int number;
@@ -18,25 +19,19 @@ class NoViewerMode {
 	public:
 	NoViewerMode(int batchRobotsSize, int lowVelocity, int highVelocity, int world_width, int world_height):
 		totalRobots(0),
+		time_solution(0),
 		world_width(world_width),
 		world_height(world_height),
 		batchRobotsSize(batchRobotsSize),
 		world(world_width, world_height)
 	{
 		initiazeEpucks(Color(0,0,1), batchRobotsSize, lowVelocity, highVelocity);
-		initiazeEpucks(Color(1,0,0), batchRobotsSize, lowVelocity, highVelocity);
-		initiazeEpucks(Color(0,0,1), batchRobotsSize, lowVelocity, highVelocity);
-		initiazeEpucks(Color(1,1,0), batchRobotsSize, lowVelocity, highVelocity);
-		initiazeEpucks(Color(1,0,0.8), batchRobotsSize, lowVelocity, highVelocity);
-
-		// create_img("results/enki_grouping_ga/initial.ppm");
 	}
 
 	void initiazeEpucks(Color color, int n, int lowVelocity, int highVelocity) {
-    cout << color << endl;
     for (int i = 0; i < n; ++i) {
       EPuckController *epuck = new EPuckController(lowVelocity, highVelocity, EPuckController::CAPABILITY_CAMERA);
-      epuck->pos = Point(UniformRand(0, 500)(), UniformRand(0, 500)());
+      epuck->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
       epuck->setColor(color);
 
       epucks.push_back(epuck);
@@ -47,13 +42,25 @@ class NoViewerMode {
 	}
 
 	void run() {
-		for (unsigned i=0; i<5000; i++) {
+		int p_fitness = 10000;
+		int p_fitness_aux = 0;
+		int count_stable = 0;
+
+		for (time_solution = 0; time_solution<10000 && count_stable < 100; time_solution++) {
 			for (int j = 0; j < totalRobots; j++) {
         epucks[j]->move();
       }
 
 			// values from viewer/Viewer.cpp
 			world.step(30.0/1000.0, 3);
+			p_fitness_aux = fitness_partial();
+
+			if (p_fitness_aux < p_fitness) {
+				p_fitness = p_fitness_aux;
+				count_stable = 0;
+			} else {
+				count_stable++;
+			}
 		}
 
     string name = "results/enki_grouping_ga/final_" + std::to_string(number) + ".ppm";
@@ -64,31 +71,54 @@ class NoViewerMode {
 		create_img(char_array);
 	}
 
-  int fitness() {
-    int n_robots_alt_of_range = 0;
+  int fitness_partial_2() {
+		int d_max = 0;
+		int value = 0;
 
     for (int i = 0; i < totalRobots; i++) {
-      Color closer_color = Color::gray;
-      double distance = 500;
-
       for (int j = 0; j < totalRobots; j++) {
-        if (i!=j && (abs(epucks[i]->pos.x - epucks[j]->pos.x) + abs(epucks[i]->pos.y - epucks[j]->pos.y)) < distance) {
-          distance = abs(epucks[i]->pos.x - epucks[j]->pos.x) + abs(epucks[i]->pos.y - epucks[j]->pos.y);
-          closer_color = epucks[j]->getColor();
-        }
-      }
+				if (i == j) continue;
 
-      if (epucks[i]->getColor() != closer_color) {
-        n_robots_alt_of_range++;
+				value = sqrt(
+					(epucks[i]->pos.x - epucks[j]->pos.x) * (epucks[i]->pos.x - epucks[j]->pos.x) +
+					(epucks[i]->pos.y - epucks[j]->pos.y) * (epucks[i]->pos.y - epucks[j]->pos.y)
+				);
+
+				if (value > d_max) {
+					d_max = value;
+				}
       }
     }
 
-    return n_robots_alt_of_range;
+    return d_max;
   }
+
+	int fitness_partial() {
+		int d_max = 0;
+		int value = 0;
+
+    for (int i = 0; i < totalRobots; i++) {
+      for (int j = 0; j < totalRobots; j++) {
+				if (i == j) continue;
+
+				value = sqrt(
+					(epucks[i]->pos.x - epucks[j]->pos.x) * (epucks[i]->pos.x - epucks[j]->pos.x) +
+					(epucks[i]->pos.y - epucks[j]->pos.y) * (epucks[i]->pos.y - epucks[j]->pos.y)
+				);
+
+				d_max += value;
+      }
+    }
+
+    return d_max / totalRobots;
+  }
+
+	int fitness() {
+		return (fitness_partial_2() * 90 + time_solution * 10) / 100;
+	}
 
   void reset(int lowVelocity, int highVelocity, int num) {
     number = num;
-
     for (int i = 0; i < totalRobots; i++) {
       epucks[i]->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
       epucks[i]->lowVelocity = lowVelocity;
@@ -104,44 +134,51 @@ class NoViewerMode {
   }
 
 	void create_img(char *fileName) {
-		int matrix[world_width][world_height];
+		int border = 5;
+		int matrix[world_width+border*2][world_height+border*2];
+		for (int i = 0; i < world_width + border*2; i++) {
+			for (int j = 0; j < world_width + border*2; j++) {
+				matrix[i][j] = -1;
+			}
+		}
+
 		for (int i = 0; i < world_width; i++) {
 			for (int j = 0; j < world_width; j++) {
-				matrix[i][j] = 0;
+				matrix[i+border][j+border] = 0;
 			}
 		}
 
 		for (int i = 0; i < totalRobots; i++) {
 			if (epucks[i]->getColor() == Color(0,0,1)) {
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y)] = 1;
-				matrix[int(epucks[i]->pos.x)+1][int(epucks[i]->pos.y)] = 1;
-				matrix[int(epucks[i]->pos.x)-1][int(epucks[i]->pos.y)] = 1;
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y+1)] = 1;
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y-1)] = 1;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y)] = 1;
+				matrix[border+int(epucks[i]->pos.x)+1][border+int(epucks[i]->pos.y)] = 1;
+				matrix[border+int(epucks[i]->pos.x)-1][border+int(epucks[i]->pos.y)] = 1;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y+1)] = 1;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y-1)] = 1;
 			} else if (epucks[i]->getColor() == Color(1,0,0)) {
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y)] = 2;
-				matrix[int(epucks[i]->pos.x)+1][int(epucks[i]->pos.y)] = 2;
-				matrix[int(epucks[i]->pos.x)-1][int(epucks[i]->pos.y)] = 2;
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y+1)] = 2;
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y-1)] = 2;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y)] = 2;
+				matrix[border+int(epucks[i]->pos.x)+1][border+int(epucks[i]->pos.y)] = 2;
+				matrix[border+int(epucks[i]->pos.x)-1][border+int(epucks[i]->pos.y)] = 2;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y+1)] = 2;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y-1)] = 2;
 			} else if (epucks[i]->getColor() == Color(0,0,1)) {
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y)] = 3;
-				matrix[int(epucks[i]->pos.x)+1][int(epucks[i]->pos.y)] = 3;
-				matrix[int(epucks[i]->pos.x)-1][int(epucks[i]->pos.y)] = 3;
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y+1)] = 3;
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y-1)] = 3;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y)] = 3;
+				matrix[border+int(epucks[i]->pos.x)+1][border+int(epucks[i]->pos.y)] = 3;
+				matrix[border+int(epucks[i]->pos.x)-1][border+int(epucks[i]->pos.y)] = 3;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y+1)] = 3;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y-1)] = 3;
 			} else if (epucks[i]->getColor() == Color(1,1,0)) {
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y)] = 4;
-				matrix[int(epucks[i]->pos.x)+1][int(epucks[i]->pos.y)] = 4;
-				matrix[int(epucks[i]->pos.x)-1][int(epucks[i]->pos.y)] = 4;
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y+1)] = 4;
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y-1)] = 4;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y)] = 4;
+				matrix[border+int(epucks[i]->pos.x)+1][border+int(epucks[i]->pos.y)] = 4;
+				matrix[border+int(epucks[i]->pos.x)-1][border+int(epucks[i]->pos.y)] = 4;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y+1)] = 4;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y-1)] = 4;
 			} else if (epucks[i]->getColor() == Color(1,0,0.8)) {
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y)] = 5;
-				matrix[int(epucks[i]->pos.x)+1][int(epucks[i]->pos.y)] = 5;
-				matrix[int(epucks[i]->pos.x)-1][int(epucks[i]->pos.y)] = 5;
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y+1)] = 5;
-				matrix[int(epucks[i]->pos.x)][int(epucks[i]->pos.y-1)] = 5;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y)] = 5;
+				matrix[border+int(epucks[i]->pos.x)+1][border+int(epucks[i]->pos.y)] = 5;
+				matrix[border+int(epucks[i]->pos.x)-1][border+int(epucks[i]->pos.y)] = 5;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y+1)] = 5;
+				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y-1)] = 5;
 			}
 		}
 
@@ -154,18 +191,22 @@ class NoViewerMode {
 		}
 
 		fprintf(imageFile,"P6\n");
-		fprintf(imageFile,"%d %d\n", world_width, world_height);
+		fprintf(imageFile,"%d %d\n", world_width + 2*border, world_height + 2*border);
 		fprintf(imageFile,"255\n");
 
-		unsigned char pix[world_width * world_height * 3];
+		unsigned char pix[world_width + 2*border * world_height + 2*border * 3];
 
 		int index = 0;
-		for (int i = 0; i < world_width; i++) {
-			for (int j = 0; j < world_width; j++) {
+		for (int i = 0; i < world_width + 2*border; i++) {
+			for (int j = 0; j < world_height + 2*border; j++) {
 				if (matrix[i][j] == 1) {
 					pix[index++] = 0;
 					pix[index++] = 150;
 					pix[index++] = 0;
+				} else if (matrix[i][j] == -1) {
+					pix[index++] = 150;
+					pix[index++] = 150;
+					pix[index++] = 150;
 				} else if (matrix[i][j] == 2) {
 					pix[index++] = 150;
 					pix[index++] = 0;

@@ -8,13 +8,7 @@ namespace Enki {
   private:
     bool seeingAnotherRobot() {
       {
-        for (int i=0; i < camera.image.size(); i++) {
-          if (camera.image[i] == getColor()) {
-            return true;
-          }
-        }
-
-        return false;
+        return camera.image[29] == getColor() || camera.image[30] == getColor();
       }
     }
 

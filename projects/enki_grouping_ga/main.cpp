@@ -21,8 +21,6 @@ using namespace std;
 NoViewerMode view(30, 10, 25, WORLD_WIDTH, WORLD_HEIGHT);
 int number = 0;
 
-
-
 /// Modelagem do problema
 struct MySolution {
 	std::vector<double> x;
@@ -34,10 +32,10 @@ struct MySolution {
 	std::string to_string() const
 	{
 		std::ostringstream out;
-		out<<"{";
+		out << "{";
 		for(unsigned long i=0;i<x.size();i++)
-			out<<(i?",":"")<<std::setprecision(10)<<x[i];
-		out<<"}";
+			out << (i?",":"") << std::setprecision(10) << x[i];
+		out << "}";
 		return out.str();
 	}
 };
@@ -51,20 +49,23 @@ typedef EA::Genetic<MySolution,MyMiddleCost> GA_Type;
 typedef EA::GenerationType<MySolution,MyMiddleCost> Generation_Type;
 
 
-// geração do conjunto inicial de individuos
 void init_genes(MySolution& p,const std::function<double(void)> &rnd01) {
 	for(int i=0;i<VARIABLE;i++) {
     p.x.push_back(rand() % 10);
   }
 }
 
-// função de avaliação
 bool eval_solution(const MySolution& p, MyMiddleCost &c) {
-	view.reset(p.x[0], p.x[1], ++number);
-	view.run();
+	int value = 0;
 
-	c.cost = view.fitness();
+	for (int i = 0; i < 3; i++) {
+		view.reset(p.x[0], p.x[1], ++number);
+		view.run();
+		value += view.fitness();
+	}
 
+
+	c.cost = value;
 	return true;
 }
 
@@ -96,42 +97,36 @@ double calculate_SO_total_fitness(const GA_Type::thisChromosomeType &X) {
 	return X.middle_costs.cost;
 }
 
-std::ofstream output_file;
+void SO_report_generation(int generation_number, const EA::GenerationType<MySolution,MyMiddleCost> &last_generation, const MySolution& best_genes){
+	cout
+		<< "Generation [" << generation_number << "], "
+		<< "Best=" << last_generation.best_total_cost << ", "
+		<< "Average=" << last_generation.average_cost << ", "
+		<< "Best genes=(" << best_genes.to_string() << ")" << ", "
+		<< "Exe_time=" << last_generation.exe_time
+		<< std::endl;
 
-void SO_report_generation(
-	int generation_number,
-	const EA::GenerationType<MySolution,MyMiddleCost> &last_generation,
-	const MySolution& best_genes)
-{
-	std::cout
-		<<"Generation ["<<generation_number<<"], "
-		<<"Best="<<last_generation.best_total_cost<<", "
-		<<"Average="<<last_generation.average_cost<<", "
-		<<"Best genes=("<<best_genes.to_string()<<")"<<", "
-		<<"Exe_time="<<last_generation.exe_time
-		<<std::endl;
-
-	output_file
-		<<generation_number<<"\t"
-		<<last_generation.average_cost<<"\t"
-		<<last_generation.best_total_cost<<"\t"
-		<<best_genes.x[0]<<"\t"
-		<<best_genes.x[1]<<"\t"
-		<<"\n";
+	// cout
+	// 	<< generation_number << "\t"
+	// 	<< last_generation.average_cost << "\t"
+	// 	<< last_generation.best_total_cost << "\t"
+	// 	<< best_genes.x[0] << "\t"
+	// 	<< best_genes.x[1]
+	// 	<< endl;
 }
 
 int main(int argc, char *argv[]) {
+	// srand (time(NULL));
 	bool trainig = true;
 
 	if (trainig) {
-		output_file.open("./result_log.txt");
-		output_file
-			<<"step"<<"\t"
-			<<"cost_avg"<<"\t"
-			<<"cost_best"<<"\t"
-			<<"lowVelocity"<<"\t"
-			<<"highVelocity"
-			<<"\n";
+		cout
+			<< "step" << "\t"
+			<< "cost_avg" << "\t"
+			<< "cost_best" << "\t"
+			<< "lowVelocity" << "\t"
+			<< "highVelocity"
+			<< endl;
 		EA::Chronometer timer;
 		timer.tic();
 
@@ -141,17 +136,17 @@ int main(int argc, char *argv[]) {
 		ga_obj.dynamic_threading=false;
 		ga_obj.idle_delay_us=0;
 		ga_obj.verbose=false;
-		ga_obj.population=20;
+		ga_obj.population=30;
 		ga_obj.user_initial_solutions={ };
-		ga_obj.generation_max=20;
+		ga_obj.generation_max=200; // geracoes
 		ga_obj.calculate_SO_total_fitness=calculate_SO_total_fitness;
 		ga_obj.init_genes=init_genes;
 		ga_obj.eval_solution=eval_solution;
 		ga_obj.mutate=mutate;
 		ga_obj.crossover=crossover;
 		ga_obj.SO_report_generation=SO_report_generation;
-		ga_obj.best_stall_max=200;
-		ga_obj.average_stall_max=200;
+		ga_obj.best_stall_max=20; //repeticoes do melhor
+		ga_obj.average_stall_max=5; //repeticoes da media
 		ga_obj.tol_stall_best=1e-6;
 		ga_obj.tol_stall_average=1e-6;
 		ga_obj.elite_count=10;
@@ -161,12 +156,11 @@ int main(int argc, char *argv[]) {
 
 		std::cout<<"The problem is optimized in "<<timer.toc()<<" seconds."<<std::endl;
 
-		output_file.close();
 	} else {
 		QApplication app(argc, argv);
 
 		World world(WORLD_WIDTH, WORLD_HEIGHT, Color::gray,  World::GroundTexture());
-		EpuckGroupingGA viewer(&world, 30, 10, 25);
+		EpuckGroupingGA viewer(&world, 50, 10, 25);
 
 		viewer.show();
 		app.exec();
