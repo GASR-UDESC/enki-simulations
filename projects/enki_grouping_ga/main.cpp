@@ -16,9 +16,9 @@ using namespace std;
 
 #define WORLD_WIDTH 500
 #define WORLD_HEIGHT 500
-#define VARIABLE 2
+#define VARIABLE 4
 
-NoViewerMode view(30, 10, 25, WORLD_WIDTH, WORLD_HEIGHT);
+NoViewerMode view(60, 0, 0, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 int number = 0;
 
 /// Modelagem do problema
@@ -51,7 +51,7 @@ typedef EA::GenerationType<MySolution,MyMiddleCost> Generation_Type;
 
 void init_genes(MySolution& p,const std::function<double(void)> &rnd01) {
 	for(int i=0;i<VARIABLE;i++) {
-    p.x.push_back(rand() % 10);
+    p.x.push_back(rand() % 19 - 9);
   }
 }
 
@@ -59,8 +59,8 @@ bool eval_solution(const MySolution& p, MyMiddleCost &c) {
 	int value = 0;
 
 	for (int i = 0; i < 3; i++) {
-		view.reset(p.x[0], p.x[1], ++number);
-		view.run();
+		view.reset(p.x[0], p.x[1], p.x[2], p.x[3], 0, 0);
+		view.run(0);
 		value += view.fitness();
 	}
 
@@ -73,7 +73,7 @@ MySolution mutate(const MySolution& X_base, const std::function<double(void)> &r
 	MySolution X_new;
 
   X_new=X_base;
-	X_new.x[rand() % VARIABLE] = rand() % 10;
+	X_new.x[rand() % VARIABLE] = rand() % 19 - 9;
 
 	return X_new;
 }
@@ -98,6 +98,10 @@ double calculate_SO_total_fitness(const GA_Type::thisChromosomeType &X) {
 }
 
 void SO_report_generation(int generation_number, const EA::GenerationType<MySolution,MyMiddleCost> &last_generation, const MySolution& best_genes){
+
+	view.reset(best_genes.x[0], best_genes.x[1], best_genes.x[2], best_genes.x[3], ++number, 1);
+	view.run(1);
+
 	cout
 		<< "Generation [" << generation_number << "], "
 		<< "Best=" << last_generation.best_total_cost << ", "
@@ -122,10 +126,10 @@ int main(int argc, char *argv[]) {
 	if (trainig) {
 		cout
 			<< "step" << "\t"
-			<< "cost_avg" << "\t"
 			<< "cost_best" << "\t"
-			<< "lowVelocity" << "\t"
-			<< "highVelocity"
+			<< "cost_avg" << "\t"
+			<< "genes" << "\t"
+			<< "time"
 			<< endl;
 		EA::Chronometer timer;
 		timer.tic();
@@ -160,7 +164,7 @@ int main(int argc, char *argv[]) {
 		QApplication app(argc, argv);
 
 		World world(WORLD_WIDTH, WORLD_HEIGHT, Color::gray,  World::GroundTexture());
-		EpuckGroupingGA viewer(&world, 50, 10, 25);
+		EpuckGroupingGA viewer(&world, 50, -1,-3,0,-7);
 
 		viewer.show();
 		app.exec();

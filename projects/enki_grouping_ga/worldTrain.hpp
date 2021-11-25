@@ -9,28 +9,53 @@ class NoViewerMode {
     int totalRobots;
     int time_solution;
     int world_width;
+		int max_i;
     int world_height;
     int number;
+		int border;
+		int img_height;
+		int img_width;
+		int current_frame_y;
+		int current_frame_x;
+		int img_v_frames;
+		int img_h_frames;
+		int **matrix_img;
+
 		World world;
 
 	protected:
     QVector<EPuckController*> epucks;
 
 	public:
-	NoViewerMode(int batchRobotsSize, int lowVelocity, int highVelocity, int world_width, int world_height):
+	NoViewerMode(
+		int batchRobotsSize,
+		int v_robot_left,
+		int v_robot_right,
+		int v_nothing_left,
+		int v_nothing_right,
+		int world_width,
+		int world_height
+	):
 		totalRobots(0),
 		time_solution(0),
+		max_i(10000),
+		border(10),
+		img_v_frames(3),
+		img_h_frames(3),
+		current_frame_y(0),
+		current_frame_x(0),
 		world_width(world_width),
 		world_height(world_height),
 		batchRobotsSize(batchRobotsSize),
 		world(world_width, world_height)
 	{
-		initiazeEpucks(Color(0,0,1), batchRobotsSize, lowVelocity, highVelocity);
+		initiazeEpucks(Color(0,0,1), batchRobotsSize, v_robot_left, v_robot_right, v_nothing_left, v_nothing_right);
+		initialize_img();
 	}
 
-	void initiazeEpucks(Color color, int n, int lowVelocity, int highVelocity) {
+	void initiazeEpucks(Color color, int n, int v_robot_left, int v_robot_right, int v_nothing_left, int v_nothing_right) {
     for (int i = 0; i < n; ++i) {
-      EPuckController *epuck = new EPuckController(lowVelocity, highVelocity, EPuckController::CAPABILITY_CAMERA);
+      EPuckController *epuck = new EPuckController(v_robot_left, v_robot_right, v_nothing_left, v_nothing_right, EPuckController::CAPABILITY_CAMERA);
       epuck->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
       epuck->setColor(color);
 
@@ -41,34 +66,27 @@ class NoViewerMode {
     totalRobots += n;
 	}
 
-	void run() {
-		int p_fitness = 10000;
-		int p_fitness_aux = 0;
-		int count_stable = 0;
-
-		for (time_solution = 0; time_solution<10000 && count_stable < 100; time_solution++) {
+	void run(int f_img) {
+		int max_i = 10000;
+		for (time_solution = 0; time_solution<max_i; time_solution++) {
 			for (int j = 0; j < totalRobots; j++) {
         epucks[j]->move();
       }
 
 			// values from viewer/Viewer.cpp
 			world.step(30.0/1000.0, 3);
-			p_fitness_aux = fitness_partial();
 
-			if (p_fitness_aux < p_fitness) {
-				p_fitness = p_fitness_aux;
-				count_stable = 0;
-			} else {
-				count_stable++;
+			if (f_img) {
+				if (time_solution % (max_i / (img_v_frames * img_h_frames - 1)) == 0 && time_solution != 0) {
+					add_frame_to_img();
+				}
 			}
 		}
 
-    string name = "results/enki_grouping_ga/final_" + std::to_string(number) + ".ppm";
-    int n = name.length();
-    char *char_array;
-    char_array = (char *) malloc(sizeof(char) * (n + 2));
-    strcpy(char_array, name.c_str());
-		create_img(char_array);
+		if (f_img) {
+			add_frame_to_img();
+			create_img();
+		}
 	}
 
   int fitness_partial_2() {
@@ -93,94 +111,84 @@ class NoViewerMode {
     return d_max;
   }
 
-	int fitness_partial() {
-		int d_max = 0;
-		int value = 0;
-
-    for (int i = 0; i < totalRobots; i++) {
-      for (int j = 0; j < totalRobots; j++) {
-				if (i == j) continue;
-
-				value = sqrt(
-					(epucks[i]->pos.x - epucks[j]->pos.x) * (epucks[i]->pos.x - epucks[j]->pos.x) +
-					(epucks[i]->pos.y - epucks[j]->pos.y) * (epucks[i]->pos.y - epucks[j]->pos.y)
-				);
-
-				d_max += value;
-      }
-    }
-
-    return d_max / totalRobots;
-  }
-
 	int fitness() {
-		return (fitness_partial_2() * 90 + time_solution * 10) / 100;
+		// parametro de regularização
+		// return (fitness_partial_2() * 90 + time_solution * 10) / 100;
+		return fitness_partial_2();
 	}
 
-  void reset(int lowVelocity, int highVelocity, int num) {
+  void reset(int v_robot_left, int v_robot_right, int v_nothing_left, int v_nothing_right, int num, int f_img) {
     number = num;
     for (int i = 0; i < totalRobots; i++) {
       epucks[i]->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
-      epucks[i]->lowVelocity = lowVelocity;
-      epucks[i]->highVelocity = highVelocity;
+      epucks[i]->v_robot_left = v_robot_left;
+      epucks[i]->v_robot_right = v_robot_right;
+      epucks[i]->v_nothing_left = v_nothing_left;
+      epucks[i]->v_nothing_right = v_nothing_right;
     }
 
-    string name = "results/enki_grouping_ga/initial_" + std::to_string(number) + "_" + std::to_string(lowVelocity) + "_" + std::to_string(highVelocity) + ".ppm";
-    int n = name.length();
-    char *char_array;
-    char_array = (char *) malloc(sizeof(char) * (n + 2));
-    strcpy(char_array, name.c_str());
-		create_img(char_array);
+		if (f_img) {
+			clean_img();
+			add_frame_to_img();
+		}
   }
 
-	void create_img(char *fileName) {
-		int border = 5;
-		int matrix[world_width+border*2][world_height+border*2];
-		for (int i = 0; i < world_width + border*2; i++) {
-			for (int j = 0; j < world_width + border*2; j++) {
-				matrix[i][j] = -1;
+	void initialize_img() {
+		img_height = world_height * img_v_frames + border * (img_v_frames + 1);
+		img_width = world_width * img_h_frames + border * (img_h_frames + 1);
+		matrix_img = (int **) malloc (img_height * sizeof(int *));
+		for (int i = 0; i < img_height; i++) {
+			matrix_img[i] = (int *) malloc (img_width * sizeof(int));
+		}
+	}
+
+	void clean_img() {
+		for (int i = 0; i < img_height; i++) {
+			for (int j = 0; j < img_width; j++) {
+				matrix_img[i][j] = -1;
 			}
 		}
+	}
 
-		for (int i = 0; i < world_width; i++) {
-			for (int j = 0; j < world_width; j++) {
-				matrix[i+border][j+border] = 0;
+	void add_frame_to_img() {
+		int off_set_x = current_frame_x * world_height + border * (current_frame_x+1);
+		int off_set_y = current_frame_y * world_height + border * (current_frame_y+1);
+
+		for (int i = off_set_y; i < off_set_y + world_height; i++) {
+			for (int j = off_set_x; j < off_set_x + world_width; j++) {
+				matrix_img[i][j] = 0;
 			}
 		}
 
 		for (int i = 0; i < totalRobots; i++) {
-			if (epucks[i]->getColor() == Color(0,0,1)) {
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y)] = 1;
-				matrix[border+int(epucks[i]->pos.x)+1][border+int(epucks[i]->pos.y)] = 1;
-				matrix[border+int(epucks[i]->pos.x)-1][border+int(epucks[i]->pos.y)] = 1;
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y+1)] = 1;
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y-1)] = 1;
-			} else if (epucks[i]->getColor() == Color(1,0,0)) {
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y)] = 2;
-				matrix[border+int(epucks[i]->pos.x)+1][border+int(epucks[i]->pos.y)] = 2;
-				matrix[border+int(epucks[i]->pos.x)-1][border+int(epucks[i]->pos.y)] = 2;
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y+1)] = 2;
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y-1)] = 2;
-			} else if (epucks[i]->getColor() == Color(0,0,1)) {
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y)] = 3;
-				matrix[border+int(epucks[i]->pos.x)+1][border+int(epucks[i]->pos.y)] = 3;
-				matrix[border+int(epucks[i]->pos.x)-1][border+int(epucks[i]->pos.y)] = 3;
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y+1)] = 3;
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y-1)] = 3;
-			} else if (epucks[i]->getColor() == Color(1,1,0)) {
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y)] = 4;
-				matrix[border+int(epucks[i]->pos.x)+1][border+int(epucks[i]->pos.y)] = 4;
-				matrix[border+int(epucks[i]->pos.x)-1][border+int(epucks[i]->pos.y)] = 4;
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y+1)] = 4;
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y-1)] = 4;
-			} else if (epucks[i]->getColor() == Color(1,0,0.8)) {
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y)] = 5;
-				matrix[border+int(epucks[i]->pos.x)+1][border+int(epucks[i]->pos.y)] = 5;
-				matrix[border+int(epucks[i]->pos.x)-1][border+int(epucks[i]->pos.y)] = 5;
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y+1)] = 5;
-				matrix[border+int(epucks[i]->pos.x)][border+int(epucks[i]->pos.y-1)] = 5;
+			int x = off_set_x + int(epucks[i]->pos.x);
+			int y = off_set_y + int(epucks[i]->pos.y);
+
+			for (int i = -2; i< 3; i++) {
+				for (int j = -2; j< 3; j++) {
+					matrix_img[y+i][x+j] = 1;
+				}
 			}
 		}
+
+		current_frame_x++;
+
+		if (current_frame_x == img_h_frames) {
+			current_frame_x = 0;
+			current_frame_y ++;
+		}
+
+		if (current_frame_y == img_h_frames) {
+			current_frame_y = 0;
+		}
+	}
+
+	void create_img() {
+		string name = "results/enki_grouping_ga/best" + std::to_string(number) + ".ppm";
+		int n = name.length();
+		char *fileName;
+		fileName = (char *) malloc(sizeof(char) * (n + 2));
+		strcpy(fileName, name.c_str());
 
 		FILE *imageFile;
 
@@ -191,47 +199,31 @@ class NoViewerMode {
 		}
 
 		fprintf(imageFile,"P6\n");
-		fprintf(imageFile,"%d %d\n", world_width + 2*border, world_height + 2*border);
+		fprintf(imageFile,"%d %d\n", img_width, img_height);
 		fprintf(imageFile,"255\n");
 
-		unsigned char pix[world_width + 2*border * world_height + 2*border * 3];
+		unsigned char pix[img_width * img_height * 3];
 
 		int index = 0;
-		for (int i = 0; i < world_width + 2*border; i++) {
-			for (int j = 0; j < world_height + 2*border; j++) {
-				if (matrix[i][j] == 1) {
-					pix[index++] = 0;
-					pix[index++] = 150;
-					pix[index++] = 0;
-				} else if (matrix[i][j] == -1) {
-					pix[index++] = 150;
-					pix[index++] = 150;
-					pix[index++] = 150;
-				} else if (matrix[i][j] == 2) {
-					pix[index++] = 150;
+		for (int i = 0; i< img_width; i++) {
+			for (int j = 0; j < img_height; j++) {
+				if (matrix_img[i][j] == 1) {
+					pix[index++] = 255;
 					pix[index++] = 0;
 					pix[index++] = 0;
-				} else if (matrix[i][j] == 3) {
-					pix[index++] = 0;
-					pix[index++] = 0;
-					pix[index++] = 150;
-				} else if (matrix[i][j] == 4) {
-					pix[index++] = 150;
-					pix[index++] = 150;
-					pix[index++] = 0;
-				} else if (matrix[i][j] == 5) {
-					pix[index++] = 150;
-					pix[index++] = 0;
-					pix[index++] = 100;
+				} else if (matrix_img[i][j] == -1) {
+					pix[index++] = 255;
+					pix[index++] = 255;
+					pix[index++] = 255;
 				} else {
-					pix[index++] = 50;
-					pix[index++] = 50;
-					pix[index++] = 50;
+					pix[index++] = 0;
+					pix[index++] = 0;
+					pix[index++] = 0;
 				}
 			}
 		}
 
-		fwrite(pix, 1, world_width * world_height * 3, imageFile);
+		fwrite(pix, 1, img_width * img_height * 3, imageFile);
 		fclose(imageFile);
 	}
 };
