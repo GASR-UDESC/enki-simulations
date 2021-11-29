@@ -13,16 +13,16 @@ namespace Enki {
     }
 
 	public:
-    int v_robot_left;
-    int v_robot_right;
-    int v_nothing_left;
-    int v_nothing_right;
+    float v_robot_left;
+    float v_robot_right;
+    float v_nothing_left;
+    float v_nothing_right;
 
 		EPuckController(
-      int v_robot_left,
-      int v_robot_right,
-      int v_nothing_left,
-      int v_nothing_right,
+      float v_robot_left,
+      float v_robot_right,
+      float v_nothing_left,
+      float v_nothing_right,
       unsigned capabilities = CAPABILITY_BASIC_SENSORS
     ):
       EPuck(capabilities),

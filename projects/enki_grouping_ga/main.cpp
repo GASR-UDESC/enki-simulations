@@ -14,9 +14,18 @@
 using namespace Enki;
 using namespace std;
 
-#define WORLD_WIDTH 500
-#define WORLD_HEIGHT 500
+#define WORLD_WIDTH 600
+#define WORLD_HEIGHT 400
 #define VARIABLE 4
+#define MAX_VALUE 12.8
+
+FILE *fp_evaluate;
+FILE *fp_best;
+
+float rand_values() {
+	float normalized = ((float) rand() / (RAND_MAX / 2)) - 1;
+	return normalized * MAX_VALUE;
+}
 
 NoViewerMode view(60, 0, 0, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 int number = 0;
@@ -51,21 +60,23 @@ typedef EA::GenerationType<MySolution,MyMiddleCost> Generation_Type;
 
 void init_genes(MySolution& p,const std::function<double(void)> &rnd01) {
 	for(int i=0;i<VARIABLE;i++) {
-    p.x.push_back(rand() % 19 - 9);
+    p.x.push_back(rand_values());
   }
 }
 
 bool eval_solution(const MySolution& p, MyMiddleCost &c) {
-	int value = 0;
+	float value = 0;
+	int times_test = 5;
 
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < times_test; i++) {
 		view.reset(p.x[0], p.x[1], p.x[2], p.x[3], 0, 0);
 		view.run(0);
 		value += view.fitness();
 	}
 
+	fprintf(fp_evaluate, "%f, %f, %f, %f, %f\n", p.x[0], p.x[1], p.x[2], p.x[3], value);
 
-	c.cost = value;
+	c.cost = value / times_test;
 	return true;
 }
 
@@ -73,7 +84,7 @@ MySolution mutate(const MySolution& X_base, const std::function<double(void)> &r
 	MySolution X_new;
 
   X_new=X_base;
-	X_new.x[rand() % VARIABLE] = rand() % 19 - 9;
+	X_new.x[rand() % VARIABLE] = rand_values();
 
 	return X_new;
 }
@@ -110,6 +121,8 @@ void SO_report_generation(int generation_number, const EA::GenerationType<MySolu
 		<< "Exe_time=" << last_generation.exe_time
 		<< std::endl;
 
+	fprintf(fp_best, "%i, %f, %f, (%s), %f\n", generation_number, last_generation.best_total_cost, last_generation.average_cost, best_genes.to_string().c_str(), last_generation.exe_time);
+
 	// cout
 	// 	<< generation_number << "\t"
 	// 	<< last_generation.average_cost << "\t"
@@ -120,8 +133,14 @@ void SO_report_generation(int generation_number, const EA::GenerationType<MySolu
 }
 
 int main(int argc, char *argv[]) {
-	// srand (time(NULL));
-	bool trainig = true;
+	fp_evaluate = fopen ("results/enki_grouping_ga/evaluate.txt", "w+");
+	fprintf(fp_evaluate, "v_robot_left, v_robot_right, v_nothing_left, v_nothing_right, value\n");
+	fp_best = fopen ("results/enki_grouping_ga/best.txt", "w+");
+	fprintf(fp_best, "Generation, Best Cost, Average Cost, Best Genes, Exec Time\n");
+
+	srand (time(NULL));
+
+	bool trainig = argv[1][0] == '1';
 
 	if (trainig) {
 		cout
@@ -164,11 +183,34 @@ int main(int argc, char *argv[]) {
 		QApplication app(argc, argv);
 
 		World world(WORLD_WIDTH, WORLD_HEIGHT, Color::gray,  World::GroundTexture());
-		EpuckGroupingGA viewer(&world, 50, -1,-3,0,-7);
 
-		viewer.show();
+		EpuckGroupingGA *viewer;
+
+		// v_robot_left, v_robot_right, v_nothing_left, v_nothing_right
+		if (argv[2][0] == '0') {
+			printf("exp: 0\n");
+			viewer = new EpuckGroupingGA(&world, 60, atof(argv[3]), atof(argv[4]), atof(argv[5]), atof(argv[6]), WORLD_WIDTH, WORLD_HEIGHT);
+		} else if (argv[2][0] == '1') {
+			printf("exp: 1\n");
+			// viewer = new EpuckGroupingGA(&world, 60, 9, -9, -9, -12.8, WORLD_WIDTH, WORLD_HEIGHT);
+			viewer = new EpuckGroupingGA(&world, 60, -9, 9, -12.8, -9, WORLD_WIDTH, WORLD_HEIGHT);
+		} else if (argv[2][0] == '2') {
+			printf("exp: 2\n");
+			viewer = new EpuckGroupingGA(&world, 60, 3, 12.8, -12.8, -10.5, WORLD_WIDTH, WORLD_HEIGHT);
+		} else if (argv[2][0] == '3') {
+			printf("exp: 3\n");
+			viewer = new EpuckGroupingGA(&world, 60, 8, 12.8, -12.8, -9, WORLD_WIDTH, WORLD_HEIGHT);
+		} else {
+			printf("exp: 4\n");
+			viewer = new EpuckGroupingGA(&world, 60, -10, 6, 10.5, 3.5, WORLD_WIDTH, WORLD_HEIGHT);
+		}
+
+		viewer->show();
 		app.exec();
 	}
+
+	fclose(fp_evaluate);
+	fclose(fp_best);
 
 	return 0;
 }

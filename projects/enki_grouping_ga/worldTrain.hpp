@@ -9,8 +9,8 @@ class NoViewerMode {
     int totalRobots;
     int time_solution;
     int world_width;
-		int max_i;
     int world_height;
+		int max_i;
     int number;
 		int border;
 		int img_height;
@@ -29,10 +29,10 @@ class NoViewerMode {
 	public:
 	NoViewerMode(
 		int batchRobotsSize,
-		int v_robot_left,
-		int v_robot_right,
-		int v_nothing_left,
-		int v_nothing_right,
+		float v_robot_left,
+		float v_robot_right,
+		float v_nothing_left,
+		float v_nothing_right,
 		int world_width,
 		int world_height
 	):
@@ -53,7 +53,7 @@ class NoViewerMode {
 		initialize_img();
 	}
 
-	void initiazeEpucks(Color color, int n, int v_robot_left, int v_robot_right, int v_nothing_left, int v_nothing_right) {
+	void initiazeEpucks(Color color, int n, float v_robot_left, float v_robot_right, float v_nothing_left, float v_nothing_right) {
     for (int i = 0; i < n; ++i) {
       EPuckController *epuck = new EPuckController(v_robot_left, v_robot_right, v_nothing_left, v_nothing_right, EPuckController::CAPABILITY_CAMERA);
       epuck->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
@@ -67,7 +67,6 @@ class NoViewerMode {
 	}
 
 	void run(int f_img) {
-		int max_i = 10000;
 		for (time_solution = 0; time_solution<max_i; time_solution++) {
 			for (int j = 0; j < totalRobots; j++) {
         epucks[j]->move();
@@ -89,9 +88,9 @@ class NoViewerMode {
 		}
 	}
 
-  int fitness_partial_2() {
-		int d_max = 0;
-		int value = 0;
+  float diameter() {
+		float d_max = 0;
+		float value = 0;
 
     for (int i = 0; i < totalRobots; i++) {
       for (int j = 0; j < totalRobots; j++) {
@@ -113,11 +112,11 @@ class NoViewerMode {
 
 	int fitness() {
 		// parametro de regularização
-		// return (fitness_partial_2() * 90 + time_solution * 10) / 100;
-		return fitness_partial_2();
+		// return (diameter() * 90 + time_solution * 10) / 100;
+		return diameter();
 	}
 
-  void reset(int v_robot_left, int v_robot_right, int v_nothing_left, int v_nothing_right, int num, int f_img) {
+  void reset(float v_robot_left, float v_robot_right, float v_nothing_left, float v_nothing_right, int num, int f_img) {
     number = num;
     for (int i = 0; i < totalRobots; i++) {
       epucks[i]->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
@@ -136,6 +135,7 @@ class NoViewerMode {
 	void initialize_img() {
 		img_height = world_height * img_v_frames + border * (img_v_frames + 1);
 		img_width = world_width * img_h_frames + border * (img_h_frames + 1);
+
 		matrix_img = (int **) malloc (img_height * sizeof(int *));
 		for (int i = 0; i < img_height; i++) {
 			matrix_img[i] = (int *) malloc (img_width * sizeof(int));
@@ -151,7 +151,7 @@ class NoViewerMode {
 	}
 
 	void add_frame_to_img() {
-		int off_set_x = current_frame_x * world_height + border * (current_frame_x+1);
+		int off_set_x = current_frame_x * world_width + border * (current_frame_x+1);
 		int off_set_y = current_frame_y * world_height + border * (current_frame_y+1);
 
 		for (int i = off_set_y; i < off_set_y + world_height; i++) {
@@ -164,11 +164,29 @@ class NoViewerMode {
 			int x = off_set_x + int(epucks[i]->pos.x);
 			int y = off_set_y + int(epucks[i]->pos.y);
 
-			for (int i = -2; i< 3; i++) {
-				for (int j = -2; j< 3; j++) {
-					matrix_img[y+i][x+j] = 1;
-				}
-			}
+			// for (int i = -2; i< 3; i++) {
+			// 	for (int j = -2; j< 3; j++) {
+			// 		matrix_img[y+i][x+j] = 1;
+			// 	}
+			// }
+
+			matrix_img[y][x] = 2;
+
+			matrix_img[y-2][x-1] = 1;
+			matrix_img[y-2][x] = 1;
+			matrix_img[y-2][x+1] = 1;
+
+			matrix_img[y+2][x-1] = 1;
+			matrix_img[y+2][x] = 1;
+			matrix_img[y+2][x+1] = 1;
+
+			matrix_img[y-1][x-2] = 1;
+			matrix_img[y][x-2] = 1;
+			matrix_img[y+1][x-2] = 1;
+
+			matrix_img[y-1][x+2] = 1;
+			matrix_img[y][x+2] = 1;
+			matrix_img[y+1][x+2] = 1;
 		}
 
 		current_frame_x++;
@@ -205,12 +223,16 @@ class NoViewerMode {
 		unsigned char pix[img_width * img_height * 3];
 
 		int index = 0;
-		for (int i = 0; i< img_width; i++) {
-			for (int j = 0; j < img_height; j++) {
+		for (int i = 0; i < img_height; i++) {
+			for (int j = 0; j < img_width; j++) {
 				if (matrix_img[i][j] == 1) {
 					pix[index++] = 255;
 					pix[index++] = 0;
 					pix[index++] = 0;
+				} else if (matrix_img[i][j] == 2) {
+					pix[index++] = 0;
+					pix[index++] = 0;
+					pix[index++] = 255;
 				} else if (matrix_img[i][j] == -1) {
 					pix[index++] = 255;
 					pix[index++] = 255;

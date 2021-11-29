@@ -11,10 +11,12 @@ namespace Enki {
   private:
     int batchRobotsSize;
     int totalRobots;
-    int v_robot_left;
-    int v_robot_right;
-    int v_nothing_left;
-    int v_nothing_right;
+    float v_robot_left;
+    float v_robot_right;
+    float v_nothing_left;
+    float v_nothing_right;
+    int world_width;
+    int world_height;
 
   protected:
     QVector<EPuckController*> epucks;
@@ -23,10 +25,12 @@ namespace Enki {
     EpuckGroupingGA(
       World *world,
       int batchRobotsSize,
-      int v_robot_left,
-      int v_robot_right,
-      int v_nothing_left,
-      int v_nothing_right,
+      float v_robot_left,
+      float v_robot_right,
+      float v_nothing_left,
+      float v_nothing_right,
+      int world_width,
+      int world_height,
       QWidget *parent = 0
     ):
       ViewerWidget(world, parent),
@@ -35,6 +39,8 @@ namespace Enki {
       v_robot_right(v_robot_right),
       v_nothing_left(v_nothing_left),
       v_nothing_right(v_nothing_right),
+      world_width(world_width),
+      world_height(world_height),
       batchRobotsSize(batchRobotsSize)
     {
       initiazeEpucks(Color::green, batchRobotsSize);
@@ -44,7 +50,7 @@ namespace Enki {
       {
         for (int i = 0; i < n; ++i) {
           EPuckController *epuck = new EPuckController(v_robot_left, v_robot_right, v_nothing_left, v_nothing_right, EPuckController::CAPABILITY_CAMERA);
-          epuck->pos = Point(UniformRand(0, 500)(), UniformRand(0, 500)());
+          epuck->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
           epuck->setColor(color);
 
           epucks.push_back(epuck);
