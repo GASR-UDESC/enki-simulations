@@ -7,6 +7,7 @@ class NoViewerMode {
 	private:
 		int batchRobotsSize;
     int totalRobots;
+    int totalObjs;
     int time_solution;
     int world_width;
     int world_height;
@@ -25,23 +26,28 @@ class NoViewerMode {
 
 	protected:
     QVector<EPuckController*> epucks;
+    QVector<PhysicalObject*> objs;
 
 	public:
 	NoViewerMode(
 		int batchRobotsSize,
+		int totalObjs,
 		float v_robot_left,
 		float v_robot_right,
+		float v_obj_left,
+		float v_obj_right,
 		float v_nothing_left,
 		float v_nothing_right,
 		int world_width,
 		int world_height
 	):
 		totalRobots(0),
+		totalObjs(0),
 		time_solution(0),
-		max_i(10000),
+		max_i(20000),
 		border(10),
-		img_v_frames(3),
-		img_h_frames(3),
+		img_v_frames(4),
+		img_h_frames(4),
 		current_frame_y(0),
 		current_frame_x(0),
 		world_width(world_width),
@@ -49,13 +55,14 @@ class NoViewerMode {
 		batchRobotsSize(batchRobotsSize),
 		world(world_width, world_height)
 	{
-		initiazeEpucks(Color(0,1,0), batchRobotsSize, v_robot_left, v_robot_right, v_nothing_left, v_nothing_right);
+		initiazeEpucks(Color(0,1,0), batchRobotsSize, v_robot_left, v_robot_right, v_obj_left, v_obj_right, v_nothing_left, v_nothing_right);
+		initializeObj(Color(1,0,0), totalObjs);
 		initialize_img();
 	}
 
-	void initiazeEpucks(Color color, int n, float v_robot_left, float v_robot_right, float v_nothing_left, float v_nothing_right) {
+	void initiazeEpucks(Color color, int n, float v_robot_left, float v_robot_right, float v_obj_left, float v_obj_right, float v_nothing_left, float v_nothing_right) {
     for (int i = 0; i < n; ++i) {
-      EPuckController *epuck = new EPuckController(v_robot_left, v_robot_right, v_nothing_left, v_nothing_right, EPuckController::CAPABILITY_CAMERA);
+      EPuckController *epuck = new EPuckController(v_robot_left, v_robot_right, v_obj_left, v_obj_right, v_nothing_left, v_nothing_right, EPuckController::CAPABILITY_CAMERA);
       epuck->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
       epuck->setColor(color);
 
@@ -64,6 +71,21 @@ class NoViewerMode {
     }
 
     totalRobots += n;
+	}
+
+	void initializeObj(Color color, int n) {
+		for (int i = 0; i < n; ++i) {
+			PhysicalObject* obj = new PhysicalObject;
+			obj->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
+      obj->setCylindric(5, 10, 35);
+			obj->dryFrictionCoefficient = 0.58;
+      obj->setColor(color);
+
+      objs.push_back(obj);
+      world.addObject(obj);
+    }
+
+		totalObjs += n;
 	}
 
 	void run(int f_img) {
@@ -92,13 +114,13 @@ class NoViewerMode {
 		float d_max = 0;
 		float value = 0;
 
-    for (int i = 0; i < totalRobots; i++) {
-      for (int j = 0; j < totalRobots; j++) {
+    for (int i = 0; i < totalObjs; i++) {
+      for (int j = 0; j < totalObjs; j++) {
 				if (i == j) continue;
 
 				value = sqrt(
-					(epucks[i]->pos.x - epucks[j]->pos.x) * (epucks[i]->pos.x - epucks[j]->pos.x) +
-					(epucks[i]->pos.y - epucks[j]->pos.y) * (epucks[i]->pos.y - epucks[j]->pos.y)
+					(objs[i]->pos.x - objs[j]->pos.x) * (objs[i]->pos.x - objs[j]->pos.x) +
+					(objs[i]->pos.y - objs[j]->pos.y) * (objs[i]->pos.y - objs[j]->pos.y)
 				);
 
 				if (value > d_max) {
@@ -116,14 +138,20 @@ class NoViewerMode {
 		return diameter();
 	}
 
-  void reset(float v_robot_left, float v_robot_right, float v_nothing_left, float v_nothing_right, int num, int f_img) {
+  void reset(float v_robot_left, float v_robot_right, float v_obj_left, float v_obj_right, float v_nothing_left, float v_nothing_right, int num, int f_img) {
     number = num;
     for (int i = 0; i < totalRobots; i++) {
       epucks[i]->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
       epucks[i]->v_robot_left = v_robot_left;
       epucks[i]->v_robot_right = v_robot_right;
+			epucks[i]->v_obj_left = v_obj_left;
+      epucks[i]->v_obj_right = v_obj_right;
       epucks[i]->v_nothing_left = v_nothing_left;
       epucks[i]->v_nothing_right = v_nothing_right;
+    }
+
+		for (int i = 0; i < totalObjs; ++i) {
+			objs[i]->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
     }
 
 		if (f_img) {
@@ -164,13 +192,35 @@ class NoViewerMode {
 			int x = off_set_x + int(epucks[i]->pos.x);
 			int y = off_set_y + int(epucks[i]->pos.y);
 
-			// for (int i = -2; i< 3; i++) {
-			// 	for (int j = -2; j< 3; j++) {
-			// 		matrix_img[y+i][x+j] = 1;
-			// 	}
-			// }
+			matrix_img[y][x] = 3;
 
-			matrix_img[y][x] = 2;
+			matrix_img[y-2][x-1] = 2;
+			matrix_img[y-2][x] = 2;
+			matrix_img[y-2][x+1] = 2;
+
+			matrix_img[y+2][x-1] = 2;
+			matrix_img[y+2][x] = 2;
+			matrix_img[y+2][x+1] = 2;
+
+			matrix_img[y-1][x-2] = 2;
+			matrix_img[y][x-2] = 2;
+			matrix_img[y+1][x-2] = 2;
+
+			matrix_img[y-1][x+2] = 2;
+			matrix_img[y][x+2] = 2;
+			matrix_img[y+1][x+2] = 2;
+		}
+
+		for (int i = 0; i < totalObjs; i++) {
+			int x = off_set_x + int(objs[i]->pos.x);
+			int y = off_set_y + int(objs[i]->pos.y);
+
+			matrix_img[y][x] = 3;
+			for (int i = -1; i <= 1; i++) {
+				for (int j = -1; j <= 1; j++) {
+					matrix_img[y+1][x+j] = 1;
+				}
+			}
 
 			matrix_img[y-2][x-1] = 1;
 			matrix_img[y-2][x] = 1;
@@ -202,7 +252,7 @@ class NoViewerMode {
 	}
 
 	void create_img() {
-		string name = "results/enki_grouping_ga/best" + std::to_string(number) + ".ppm";
+		string name = "results/enki_clustering_ga/best" + std::to_string(number) + ".ppm";
 		int n = name.length();
 		char *fileName;
 		fileName = (char *) malloc(sizeof(char) * (n + 2));
@@ -230,6 +280,10 @@ class NoViewerMode {
 					pix[index++] = 0;
 					pix[index++] = 0;
 				} else if (matrix_img[i][j] == 2) {
+					pix[index++] = 0;
+					pix[index++] = 255;
+					pix[index++] = 0;
+				} else if (matrix_img[i][j] == 3) {
 					pix[index++] = 0;
 					pix[index++] = 0;
 					pix[index++] = 255;
