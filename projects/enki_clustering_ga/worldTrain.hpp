@@ -27,6 +27,8 @@ class NoViewerMode {
 	protected:
     QVector<EPuckController*> epucks;
     QVector<PhysicalObject*> objs;
+    QVector<QVector<Point>> point_epucks;
+    QVector<QVector<Point>> point_objs;
 
 	public:
 	NoViewerMode(
@@ -39,7 +41,8 @@ class NoViewerMode {
 		float v_nothing_left,
 		float v_nothing_right,
 		int world_width,
-		int world_height
+		int world_height,
+		int time_test
 	):
 		totalRobots(0),
 		totalObjs(0),
@@ -58,11 +61,13 @@ class NoViewerMode {
 		initiazeEpucks(Color(0,1,0), batchRobotsSize, v_robot_left, v_robot_right, v_obj_left, v_obj_right, v_nothing_left, v_nothing_right);
 		initializeObj(Color(1,0,0), totalObjs);
 		initialize_img();
+		initialize_points(time_test);
 	}
 
 	void initiazeEpucks(Color color, int n, float v_robot_left, float v_robot_right, float v_obj_left, float v_obj_right, float v_nothing_left, float v_nothing_right) {
     for (int i = 0; i < n; ++i) {
       EPuckController *epuck = new EPuckController(v_robot_left, v_robot_right, v_obj_left, v_obj_right, v_nothing_left, v_nothing_right, EPuckController::CAPABILITY_CAMERA);
+			// essa posicao eh ignorada
       epuck->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
       epuck->setColor(color);
 
@@ -88,6 +93,38 @@ class NoViewerMode {
 		totalObjs += n;
 	}
 
+	void initialize_points(int time_test) {
+		for (int i = 0; i < time_test; ++i) {
+			QVector<Point> aux;
+			for (int j = 0; j < totalRobots; ++j) {
+				aux.push_back(Point(UniformRand(0, world_width)(), UniformRand(0, world_height)()));
+			}
+			point_epucks.push_back(aux);
+		}
+
+		for (int i = 0; i < time_test; ++i) {
+			QVector<Point> aux;
+			for (int j = 0; j < totalObjs; ++j) {
+				aux.push_back(Point(UniformRand(0, world_width)(), UniformRand(0, world_height)()));
+			}
+			point_objs.push_back(aux);
+		}
+	}
+
+	void reset_points(int time_test) {
+		for (int i = 0; i < time_test; ++i) {
+			for (int j = 0; j < totalRobots; ++j) {
+				point_epucks[i][j] = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
+			}
+		}
+
+		for (int i = 0; i < time_test; ++i) {
+			for (int j = 0; j < totalObjs; ++j) {
+			point_objs[i][j] = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
+			}
+		}
+	}
+
 	void run(int f_img) {
 		for (time_solution = 0; time_solution<max_i; time_solution++) {
 			for (int j = 0; j < totalRobots; j++) {
@@ -95,10 +132,10 @@ class NoViewerMode {
       }
 
 			// values from viewer/Viewer.cpp
-			world.step(30.0/1000.0, 3);
+			world.step(0.1, 10);
 
 			if (f_img) {
-				if (time_solution % (max_i / (img_v_frames * img_h_frames - 1)) == 0 && time_solution != 0) {
+				if (time_solution % (max_i / (img_v_frames * img_h_frames - 1)) == 0 && ((current_frame_y+1) != img_v_frames || (current_frame_x+1) != img_h_frames) && time_solution != 0) {
 					add_frame_to_img();
 				}
 			}
@@ -132,16 +169,16 @@ class NoViewerMode {
     return d_max;
   }
 
-	int fitness() {
+	float fitness() {
 		// parametro de regularização
 		// return (diameter() * 90 + time_solution * 10) / 100;
 		return diameter();
 	}
 
-  void reset(float v_robot_left, float v_robot_right, float v_obj_left, float v_obj_right, float v_nothing_left, float v_nothing_right, int num, int f_img) {
+  void reset(float v_robot_left, float v_robot_right, float v_obj_left, float v_obj_right, float v_nothing_left, float v_nothing_right, int num, int f_img, int test_number) {
     number = num;
     for (int i = 0; i < totalRobots; i++) {
-      epucks[i]->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
+      epucks[i]->pos = point_epucks[test_number][i];
       epucks[i]->v_robot_left = v_robot_left;
       epucks[i]->v_robot_right = v_robot_right;
 			epucks[i]->v_obj_left = v_obj_left;
@@ -151,7 +188,7 @@ class NoViewerMode {
     }
 
 		for (int i = 0; i < totalObjs; ++i) {
-			objs[i]->pos = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
+			objs[i]->pos = point_objs[test_number][i];
     }
 
 		if (f_img) {
@@ -216,9 +253,9 @@ class NoViewerMode {
 			int y = off_set_y + int(objs[i]->pos.y);
 
 			matrix_img[y][x] = 3;
-			for (int i = -1; i <= 1; i++) {
+			for (int k = -1; k <= 1; k++) {
 				for (int j = -1; j <= 1; j++) {
-					matrix_img[y+1][x+j] = 1;
+					matrix_img[y+k][x+j] = 1;
 				}
 			}
 

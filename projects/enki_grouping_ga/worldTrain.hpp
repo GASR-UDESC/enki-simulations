@@ -40,8 +40,8 @@ class NoViewerMode {
 		time_solution(0),
 		max_i(10000),
 		border(10),
-		img_v_frames(3),
-		img_h_frames(3),
+		img_v_frames(4),
+		img_h_frames(4),
 		current_frame_y(0),
 		current_frame_x(0),
 		world_width(world_width),
@@ -76,7 +76,7 @@ class NoViewerMode {
 			world.step(30.0/1000.0, 3);
 
 			if (f_img) {
-				if (time_solution % (max_i / (img_v_frames * img_h_frames - 1)) == 0 && time_solution != 0) {
+				if (time_solution % (max_i / (img_v_frames * img_h_frames - 1)) == 0 && ((current_frame_y+1) != img_v_frames || (current_frame_x+1) != img_h_frames) && time_solution != 0) {
 					add_frame_to_img();
 				}
 			}

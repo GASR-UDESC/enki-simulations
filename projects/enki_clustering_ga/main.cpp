@@ -20,6 +20,9 @@ using namespace std;
 #define MAX_VALUE 12.8
 #define ROBOT_N 20
 #define OBJ_N 50
+#define TIMES_TEST 10
+
+int ind_id = 0;
 
 FILE *fp_evaluate;
 FILE *fp_best;
@@ -29,7 +32,7 @@ float rand_values() {
 	return normalized * MAX_VALUE;
 }
 
-NoViewerMode view(ROBOT_N, OBJ_N,  0, 0, 0, 0, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+NoViewerMode view(ROBOT_N, OBJ_N,  0, 0, 0, 0, 0, 0, WORLD_WIDTH, WORLD_HEIGHT, TIMES_TEST);
 int number = 0;
 
 /// Modelagem do problema
@@ -68,17 +71,23 @@ void init_genes(MySolution& p,const std::function<double(void)> &rnd01) {
 
 bool eval_solution(const MySolution& p, MyMiddleCost &c) {
 	float value = 0;
-	int times_test = 5;
+	float value_aux = 0;
+	EA::Chronometer timer_aux;
+	ind_id++;
 
-	for (int i = 0; i < times_test; i++) {
-		view.reset(p.x[0], p.x[1], p.x[2], p.x[3], p.x[4], p.x[5], 0, 0);
+	for (int i = 0; i < TIMES_TEST; i++) {
+		view.reset(p.x[0], p.x[1], p.x[2], p.x[3], p.x[4], p.x[5], 0, 0, i);
+		timer_aux.tic();
 		view.run(0);
-		value += view.fitness();
+		value_aux = view.fitness();
+		value += value_aux / TIMES_TEST;
+
+		fp_evaluate = fopen("results/enki_clustering_ga/evaluate.txt", "a+");
+		fprintf(fp_evaluate, "%i, %i, %i, %f, %f, %f, %f, %f, %f, %f, %f\n", number, ind_id, i+1, p.x[0], p.x[1], p.x[2], p.x[3], p.x[4], p.x[5], value_aux, timer_aux.toc());
+		fclose(fp_evaluate);
 	}
 
-	fprintf(fp_evaluate, "%f, %f, %f, %f, %f, %f, %f\n", p.x[0], p.x[1], p.x[2], p.x[3], p.x[4], p.x[5], value);
-
-	c.cost = value / times_test;
+	c.cost = value;
 	return true;
 }
 
@@ -86,7 +95,11 @@ MySolution mutate(const MySolution& X_base, const std::function<double(void)> &r
 	MySolution X_new;
 
   X_new=X_base;
-	X_new.x[rand() % VARIABLE] = rand_values();
+
+	int genes_matate = rand() % VARIABLE + 1;
+	for (int i = 0; i < genes_matate; i++) {
+		X_new.x[rand() % VARIABLE] = rand_values();
+	}
 
 	return X_new;
 }
@@ -112,8 +125,9 @@ double calculate_SO_total_fitness(const GA_Type::thisChromosomeType &X) {
 
 void SO_report_generation(int generation_number, const EA::GenerationType<MySolution,MyMiddleCost> &last_generation, const MySolution& best_genes){
 
-	view.reset(best_genes.x[0], best_genes.x[1], best_genes.x[2], best_genes.x[3], best_genes.x[4], best_genes.x[5], ++number, 1);
+	view.reset(best_genes.x[0], best_genes.x[1], best_genes.x[2], best_genes.x[3], best_genes.x[4], best_genes.x[5], ++number, 1, 0);
 	view.run(1);
+	view.reset_points(TIMES_TEST);
 
 	cout
 		<< "Generation [" << generation_number << "], "
@@ -123,7 +137,9 @@ void SO_report_generation(int generation_number, const EA::GenerationType<MySolu
 		<< "Exe_time=" << last_generation.exe_time
 		<< std::endl;
 
+	fp_best = fopen("results/enki_clustering_ga/best.txt", "a+");
 	fprintf(fp_best, "%i, %f, %f, (%s), %f\n", generation_number, last_generation.best_total_cost, last_generation.average_cost, best_genes.to_string().c_str(), last_generation.exe_time);
+	fclose(fp_best);
 
 	// cout
 	// 	<< generation_number << "\t"
@@ -135,10 +151,13 @@ void SO_report_generation(int generation_number, const EA::GenerationType<MySolu
 }
 
 int main(int argc, char *argv[]) {
-	fp_evaluate = fopen ("results/enki_clustering_ga/evaluate.txt", "w+");
-	fprintf(fp_evaluate, "v_robot_left, v_robot_right, v_obj_left, v_obj_right, v_nothing_left, v_nothing_right, value\n");
-	fp_best = fopen ("results/enki_clustering_ga/best.txt", "w+");
+	fp_evaluate = fopen("results/enki_clustering_ga/evaluate.txt", "w+");
+	fprintf(fp_evaluate, "gen_id, ind_id, test_id, v_robot_left, v_robot_right, v_obj_left, v_obj_right, v_nothing_left, v_nothing_right, value, time_exec\n");
+	fclose(fp_evaluate);
+
+	fp_best = fopen("results/enki_clustering_ga/best.txt", "w+");
 	fprintf(fp_best, "Generation, Best Cost, Average Cost, Best Genes, Exec Time\n");
+	fclose(fp_best);
 
 	srand (time(NULL));
 

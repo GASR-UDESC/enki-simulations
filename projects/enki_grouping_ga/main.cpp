@@ -138,6 +138,8 @@ int main(int argc, char *argv[]) {
 	fp_best = fopen ("results/enki_grouping_ga/best.txt", "w+");
 	fprintf(fp_best, "Generation, Best Cost, Average Cost, Best Genes, Exec Time\n");
 
+	// colocar um argv[x]
+	// guardar a seed
 	srand (time(NULL));
 
 	bool trainig = argv[1][0] == '1';
