@@ -1,4 +1,5 @@
+mkdir build
 cd build
-rm -fr projects
+rm -rf projects
 cmake ..
 make
