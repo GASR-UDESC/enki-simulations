@@ -8,6 +8,5 @@ find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL)
 find_package(OpenGL REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 add_subdirectory(projects)

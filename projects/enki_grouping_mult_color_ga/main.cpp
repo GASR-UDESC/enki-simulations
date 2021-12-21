@@ -10,6 +10,8 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <vector>
+#include<thread>
 
 using namespace Enki;
 using namespace std;
@@ -20,21 +22,22 @@ using namespace std;
 #define ROBOT_N 15
 #define INDIVIDUAL_N 10
 #define MAX_VALUE 12.8
-#define TIMES_TEST 5
+#define TIMES_TEST 3
 #define BATCHS 6
 
 int ind_id = 0;
-
+int number = 0;
 FILE *fp_evaluate;
 FILE *fp_best;
+static std::mutex m;
+float value[TIMES_TEST];
+std::thread thread_objs[TIMES_TEST];
+vector <NoViewerMode*> views;
 
 float rand_values() {
 	float normalized = ((float) rand() / (RAND_MAX / 2)) - 1;
 	return normalized * MAX_VALUE;
 }
-
-NoViewerMode view(ROBOT_N, BATCHS, 0, 0, 0, 0, 0, 0, WORLD_WIDTH, WORLD_HEIGHT, TIMES_TEST);
-int number = 0;
 
 /// Modelagem do problema
 struct MySolution {
@@ -55,6 +58,8 @@ struct MySolution {
 	}
 };
 
+const MySolution *p_to_eval;
+
 // resultado da função de fitness
 struct MyMiddleCost {
 	double cost;
@@ -70,25 +75,50 @@ void init_genes(MySolution& p,const std::function<double(void)> &rnd01) {
   }
 }
 
-bool eval_solution(const MySolution& p, MyMiddleCost &c) {
-	float value = 0;
-	float value_aux = 0;
+void init_words() {
+	for(int i=0; i < TIMES_TEST; i++) {
+		NoViewerMode *view = new NoViewerMode(ROBOT_N, BATCHS, 0, 0, 0, 0, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+		views.push_back(view);
+	}
+}
+
+void eval_t(int t_id) {
 	EA::Chronometer timer_aux;
+	timer_aux.tic();
+
+	views[t_id]->reset(p_to_eval->x[0], p_to_eval->x[1], p_to_eval->x[2], p_to_eval->x[3], p_to_eval->x[4], p_to_eval->x[5], 0, 0);
+	views[t_id]->run(0);
+	value[t_id] = views[t_id]->fitness();
+
+	m.lock();
+	fp_evaluate = fopen("results/enki_grouping_mult_color_ga/evaluate.txt", "a+");
+	fprintf(fp_evaluate, "%i, %i, %i, %f, %f, %f, %f, %f, %f, %f, %f\n", number, ind_id, t_id, p_to_eval->x[0], p_to_eval->x[1], p_to_eval->x[2], p_to_eval->x[3], p_to_eval->x[4], p_to_eval->x[5], value[t_id], timer_aux.toc());
+	fclose(fp_evaluate);
+	m.unlock();
+}
+
+bool eval_solution(const MySolution& p, MyMiddleCost &c) {
+	p_to_eval = &p;
+
+	float value_media = 0;
 	ind_id++;
 
 	for (int i = 0; i < TIMES_TEST; i++) {
-		view.reset(p.x[0], p.x[1], p.x[2], p.x[3], p.x[4], p.x[5], 0, 0, i);
-		timer_aux.tic();
-		view.run(0);
-		value_aux = view.fitness();
-		value += value_aux / TIMES_TEST;
+    value[i] = 0;
+    thread_objs[i] = std::thread(eval_t, i);
+  }
 
-		fp_evaluate = fopen("results/enki_grouping_mult_color_ga/evaluate.txt", "a+");
-		fprintf(fp_evaluate, "%i, %i, %i, %f, %f, %f, %f, %f, %f, %f, %f\n", number, ind_id, i+1, p.x[0], p.x[1], p.x[2], p.x[3], p.x[4], p.x[5], value_aux, timer_aux.toc());
-		fclose(fp_evaluate);
+  for (int i = 0; i < TIMES_TEST; i++) {
+    thread_objs[i].join();
+    thread_objs[i].thread::~thread();
+  }
+
+	for (int i = 0; i < TIMES_TEST; i++) {
+		value_media += value[i] / TIMES_TEST;
 	}
 
-	c.cost = value;
+	c.cost = value_media;
 	return true;
 }
 
@@ -126,9 +156,12 @@ double calculate_SO_total_fitness(const GA_Type::thisChromosomeType &X) {
 
 void SO_report_generation(int generation_number, const EA::GenerationType<MySolution,MyMiddleCost> &last_generation, const MySolution& best_genes){
 
-	view.reset(best_genes.x[0], best_genes.x[1], best_genes.x[2], best_genes.x[3], best_genes.x[4], best_genes.x[5], ++number, 1, 0);
-	view.run(1);
-	view.reset_points(TIMES_TEST);
+	views[0]->reset(best_genes.x[0], best_genes.x[1], best_genes.x[2], best_genes.x[3], best_genes.x[4], best_genes.x[5], ++number, 1);
+	views[0]->run(1);
+
+	for (int i = 0; i < TIMES_TEST; i++) {
+		views[0]->reset_points(TIMES_TEST);
+	}
 
 	cout
 		<< "Generation [" << generation_number << "], "
@@ -149,6 +182,8 @@ int main(int argc, char *argv[]) {
 	bool trainig = argv[1][0] == '1';
 
 	if (trainig) {
+		init_words();
+
 		fp_evaluate = fopen ("results/enki_grouping_mult_color_ga/evaluate.txt", "w+");
 		fprintf(fp_evaluate, "gen_id, ind_id, test_id, v_similar_robot_left, v_similar_robot_right, v_diferent_robot_left, v_diferent_robot_right, v_nothing_left, v_nothing_right, value\n");
 		fp_best = fopen ("results/enki_grouping_mult_color_ga/best.txt", "w+");
@@ -182,6 +217,7 @@ int main(int argc, char *argv[]) {
 			// MySolution({5.154663086,4.03364563,4.678225517,9.345822334,-6.364855766,8.264378548}),
 			// MySolution({5.154663086,4.03364563,-5.498818874,7.333633423,-9.482215881,2.197157383}),
 			// MySolution({9.221704483,4.03364563,0.5469299555,9.345822334,-5.732907295,8.264378548}),
+			// MySolution({8.444081306,7.131147861,-9.399335861,3.244485378,4.76662302,5.808334351}),
 		};
 		ga_obj.generation_max=500; // geracoes
 		ga_obj.calculate_SO_total_fitness=calculate_SO_total_fitness;

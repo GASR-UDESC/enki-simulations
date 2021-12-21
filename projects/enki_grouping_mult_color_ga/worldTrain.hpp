@@ -27,7 +27,7 @@ class NoViewerMode {
 	protected:
 		unsigned char *pix;
     QVector<EPuckController*> epucks;
-    QVector<QVector<Point>> point_epucks;
+    QVector<Point> point_epucks;
     QVector<Color> colors = {Color(0,1,0), Color(0,0,1), Color(1,0,0), Color(1,1,0), Color(1, 0.5, 0), Color(1,1,1)};
 
 	public:
@@ -41,8 +41,7 @@ class NoViewerMode {
 		float v_nothing_left,
 		float v_nothing_right,
 		int world_width,
-		int world_height,
-		int times_test
+		int world_height
 	):
 		totalRobots(0),
 		time_solution(0),
@@ -60,7 +59,7 @@ class NoViewerMode {
 	{
 		initialize_batchs(batchs, v_similar_robot_left, v_similar_robot_right, v_diferent_robot_left, v_diferent_robot_right, v_nothing_left, v_nothing_right);
 		initialize_img();
-		initialize_points(times_test);
+		initialize_points();
 	}
 
 	void initialize_batchs(int batchs, float v_similar_robot_left, float v_similar_robot_right, float v_diferent_robot_left, float v_diferent_robot_right, float v_nothing_left, float v_nothing_right) {
@@ -82,21 +81,15 @@ class NoViewerMode {
     totalRobots += batchRobotsSize;
 	}
 
-	void initialize_points(int times_test) {
-		for (int i = 0; i < times_test; ++i) {
-			QVector<Point> aux;
-			for (int j = 0; j < totalRobots; ++j) {
-				aux.push_back(Point(UniformRand(0, world_width)(), UniformRand(0, world_height)()));
-			}
-			point_epucks.push_back(aux);
+	void initialize_points() {
+		for (int j = 0; j < totalRobots; ++j) {
+			point_epucks.push_back(Point(UniformRand(0, world_width)(), UniformRand(0, world_height)()));
 		}
 	}
 
 	void reset_points(int time_test) {
-		for (int i = 0; i < time_test; ++i) {
-			for (int j = 0; j < totalRobots; ++j) {
-				point_epucks[i][j] = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
-			}
+		for (int j = 0; j < totalRobots; ++j) {
+			point_epucks[j] = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
 		}
 	}
 
@@ -192,10 +185,10 @@ class NoViewerMode {
 		return value;
 	}
 
-  void reset(float v_similar_robot_left, float v_similar_robot_right, float v_diferent_robot_left, float v_diferent_robot_right, float v_nothing_left, float v_nothing_right, int num, int f_img, int test_number) {
+  void reset(float v_similar_robot_left, float v_similar_robot_right, float v_diferent_robot_left, float v_diferent_robot_right, float v_nothing_left, float v_nothing_right, int num, int f_img) {
     number = num;
     for (int i = 0; i < totalRobots; i++) {
-      epucks[i]->pos = point_epucks[test_number][i];
+      epucks[i]->pos = point_epucks[i];
       epucks[i]->v_similar_robot_left = v_similar_robot_left;
       epucks[i]->v_similar_robot_right = v_similar_robot_right;
       epucks[i]->v_diferent_robot_left = v_diferent_robot_left;
