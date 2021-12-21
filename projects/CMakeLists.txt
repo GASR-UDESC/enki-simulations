@@ -1,2 +1,5 @@
+add_subdirectory(enki_clustering_ga)
+add_subdirectory(enki_grouping_ga)
 add_subdirectory(enki_grouping)
 add_subdirectory(enki_grouping_mult_color)
+add_subdirectory(enki_grouping_mult_color_ga)
