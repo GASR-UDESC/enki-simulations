@@ -2,9 +2,33 @@
 
 A collection of small projects with enki simulator
 
-## Dependencies
+## Runnig with docker
 
-### [Enki simulator](https://github.com/enki-community/enki) dependencies
+### Dependencies
+
+- docker
+
+### 1. Buildin image
+
+This command is create a image with all dependencies.
+
+```sh
+docker build . -t enki-s:1
+```
+
+### up image to acces project
+
+This command up container with a shared volume with base project folder, and access bash of this container.
+
+```sh
+docker run --rm -it -v "$(pwd):/usr/src/enki-s" enki-s:1
+```
+
+## 2. Runnig on native install
+
+### Dependencies native
+
+#### [Enki simulator](https://github.com/enki-community/enki) dependencies
 
 - qt5
 - cmake
@@ -13,6 +37,7 @@ A collection of small projects with enki simulator
 ## Scripts
 
 ### Setup Project
+
 
 To prepare project to compile run:
 
