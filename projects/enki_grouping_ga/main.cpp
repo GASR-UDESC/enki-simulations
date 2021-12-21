@@ -17,7 +17,10 @@ using namespace std;
 #define WORLD_WIDTH 600
 #define WORLD_HEIGHT 400
 #define VARIABLE 4
+#define TIMES_TEST 5
 #define MAX_VALUE 12.8
+
+int ind_id = 0;
 
 FILE *fp_evaluate;
 FILE *fp_best;
@@ -66,17 +69,23 @@ void init_genes(MySolution& p,const std::function<double(void)> &rnd01) {
 
 bool eval_solution(const MySolution& p, MyMiddleCost &c) {
 	float value = 0;
-	int times_test = 5;
+	float value_aux = 0;
+	EA::Chronometer timer_aux;
+	ind_id++;
 
-	for (int i = 0; i < times_test; i++) {
+	for (int i = 0; i < TIMES_TEST; i++) {
 		view.reset(p.x[0], p.x[1], p.x[2], p.x[3], 0, 0);
+		timer_aux.tic();
 		view.run(0);
-		value += view.fitness();
+		value_aux = view.fitness();
+		value += value_aux / TIMES_TEST;
+
+		fp_evaluate = fopen("results/enki_grouping_ga/evaluate.txt", "a+");
+		fprintf(fp_evaluate, "%i, %i, %i, %f, %f, %f, %f, %f, %f, %f, %f\n", number, ind_id, i+1, p.x[0], p.x[1], p.x[2], p.x[3], p.x[4], p.x[5], value_aux, timer_aux.toc());
+		fclose(fp_evaluate);
 	}
 
-	fprintf(fp_evaluate, "%f, %f, %f, %f, %f\n", p.x[0], p.x[1], p.x[2], p.x[3], value);
-
-	c.cost = value / times_test;
+	c.cost = value;
 	return true;
 }
 
@@ -121,7 +130,10 @@ void SO_report_generation(int generation_number, const EA::GenerationType<MySolu
 		<< "Exe_time=" << last_generation.exe_time
 		<< std::endl;
 
+	fp_best = fopen("results/enki_grouping_ga/best.txt", "a+");
 	fprintf(fp_best, "%i, %f, %f, (%s), %f\n", generation_number, last_generation.best_total_cost, last_generation.average_cost, best_genes.to_string().c_str(), last_generation.exe_time);
+	fclose(fp_best);
+
 
 	// cout
 	// 	<< generation_number << "\t"
@@ -133,11 +145,6 @@ void SO_report_generation(int generation_number, const EA::GenerationType<MySolu
 }
 
 int main(int argc, char *argv[]) {
-	fp_evaluate = fopen ("results/enki_grouping_ga/evaluate.txt", "w+");
-	fprintf(fp_evaluate, "v_robot_left, v_robot_right, v_nothing_left, v_nothing_right, value\n");
-	fp_best = fopen ("results/enki_grouping_ga/best.txt", "w+");
-	fprintf(fp_best, "Generation, Best Cost, Average Cost, Best Genes, Exec Time\n");
-
 	// colocar um argv[x]
 	// guardar a seed
 	srand (time(NULL));
@@ -145,6 +152,13 @@ int main(int argc, char *argv[]) {
 	bool trainig = argv[1][0] == '1';
 
 	if (trainig) {
+		fp_evaluate = fopen ("results/enki_grouping_ga/evaluate.txt", "w+");
+		fprintf(fp_evaluate, "gen_id, ind_id, test_id, v_robot_left, v_robot_right, v_nothing_left, v_nothing_right, value\n");
+		fp_best = fopen ("results/enki_grouping_ga/best.txt", "w+");
+		fprintf(fp_best, "Generation, Best Cost, Average Cost, Best Genes, Exec Time\n");
+		fclose(fp_evaluate);
+		fclose(fp_best);
+
 		cout
 			<< "step" << "\t"
 			<< "cost_best" << "\t"
@@ -210,9 +224,6 @@ int main(int argc, char *argv[]) {
 		viewer->show();
 		app.exec();
 	}
-
-	fclose(fp_evaluate);
-	fclose(fp_best);
 
 	return 0;
 }

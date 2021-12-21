@@ -25,6 +25,7 @@ class NoViewerMode {
 		World world;
 
 	protected:
+		unsigned char *pix;
     QVector<EPuckController*> epucks;
     QVector<QVector<Point>> point_epucks;
     QVector<Color> colors = {Color(0,1,0), Color(0,0,1), Color(1,0,0), Color(1,1,0), Color(1, 0.5, 0), Color(1,1,1)};
@@ -88,6 +89,14 @@ class NoViewerMode {
 				aux.push_back(Point(UniformRand(0, world_width)(), UniformRand(0, world_height)()));
 			}
 			point_epucks.push_back(aux);
+		}
+	}
+
+	void reset_points(int time_test) {
+		for (int i = 0; i < time_test; ++i) {
+			for (int j = 0; j < totalRobots; ++j) {
+				point_epucks[i][j] = Point(UniformRand(0, world_width)(), UniformRand(0, world_height)());
+			}
 		}
 	}
 
@@ -204,6 +213,7 @@ class NoViewerMode {
 	void initialize_img() {
 		img_height = world_height * img_v_frames + border * (img_v_frames + 1);
 		img_width = world_width * img_h_frames + border * (img_h_frames + 1);
+		pix = (unsigned char*) malloc (3);
 
 		matrix_img = (int **) malloc (img_height * sizeof(int *));
 		for (int i = 0; i < img_height; i++) {
@@ -287,49 +297,50 @@ class NoViewerMode {
 		fprintf(imageFile,"%d %d\n", img_width, img_height);
 		fprintf(imageFile,"255\n");
 
-		unsigned char pix[img_width * img_height * 3];
-
     // QVector<Color> colors = {Color(0,1,0), Color(0,0,1), Color(1,0,0), Color(1,1,0), Color(0.6, 0.2, 1), Color(1,1,1)};
-		int index = 0;
 		for (int i = 0; i < img_height; i++) {
+			// printf("->%i\n", img_width * img_height * 3);
+			int index = 0;
+			// printf("<-\n");
+
 			for (int j = 0; j < img_width; j++) {
 				if (matrix_img[i][j] == 1) {
-					pix[index++] = 0;
-					pix[index++] = 255;
-					pix[index++] = 0;
+					pix[0] = 0;
+					pix[1] = 255;
+					pix[2] = 0;
 				} else if (matrix_img[i][j] == 2) {
-					pix[index++] = 0;
-					pix[index++] = 0;
-					pix[index++] = 255;
+					pix[0] = 0;
+					pix[1] = 0;
+					pix[2] = 255;
 				} else if (matrix_img[i][j] == 3) {
-					pix[index++] = 255;
-					pix[index++] = 0;
-					pix[index++] = 0;
+					pix[0] = 255;
+					pix[1] = 0;
+					pix[2] = 0;
 				} else if (matrix_img[i][j] == 4) {
-					pix[index++] = 255;
-					pix[index++] = 255;
-					pix[index++] = 0;
+					pix[0] = 255;
+					pix[1] = 255;
+					pix[2] = 0;
 				} else if (matrix_img[i][j] == 5) {
-					pix[index++] = 255;
-					pix[index++] = 127;
-					pix[index++] = 0;
+					pix[0] = 255;
+					pix[1] = 127;
+					pix[2] = 0;
 				} else if (matrix_img[i][j] == 6) {
-					pix[index++] = 255;
-					pix[index++] = 255;
-					pix[index++] = 255;
+					pix[0] = 255;
+					pix[1] = 255;
+					pix[2] = 255;
 				} else if (matrix_img[i][j] == -1) {
-					pix[index++] = 255;
-					pix[index++] = 255;
-					pix[index++] = 255;
+					pix[0] = 255;
+					pix[1] = 255;
+					pix[2] = 255;
 				} else {
-					pix[index++] = 0;
-					pix[index++] = 0;
-					pix[index++] = 0;
+					pix[0] = 0;
+					pix[1] = 0;
+					pix[2] = 0;
 				}
+				fwrite(pix, 1, 3, imageFile);
 			}
 		}
 
-		fwrite(pix, 1, img_width * img_height * 3, imageFile);
 		fclose(imageFile);
 	}
 };

@@ -21,7 +21,7 @@ using namespace std;
 #define INDIVIDUAL_N 10
 #define MAX_VALUE 12.8
 #define TIMES_TEST 5
-#define BATCHS 5
+#define BATCHS 6
 
 int ind_id = 0;
 
@@ -128,6 +128,7 @@ void SO_report_generation(int generation_number, const EA::GenerationType<MySolu
 
 	view.reset(best_genes.x[0], best_genes.x[1], best_genes.x[2], best_genes.x[3], best_genes.x[4], best_genes.x[5], ++number, 1, 0);
 	view.run(1);
+	view.reset_points(TIMES_TEST);
 
 	cout
 		<< "Generation [" << generation_number << "], "
@@ -140,19 +141,9 @@ void SO_report_generation(int generation_number, const EA::GenerationType<MySolu
 	fp_best = fopen("results/enki_grouping_mult_color_ga/best.txt", "a+");
 	fprintf(fp_best, "%i, %f, %f, (%s), %f\n", generation_number, last_generation.best_total_cost, last_generation.average_cost, best_genes.to_string().c_str(), last_generation.exe_time);
 	fclose(fp_best);
-
-	// cout
-	// 	<< generation_number << "\t"
-	// 	<< last_generation.average_cost << "\t"
-	// 	<< last_generation.best_total_cost << "\t"
-	// 	<< best_genes.x[0] << "\t"
-	// 	<< best_genes.x[1]
-	// 	<< endl;
 }
 
 int main(int argc, char *argv[]) {
-	// colocar um argv[x]
-	// guardar a seed
 	srand (time(NULL));
 
 	bool trainig = argv[1][0] == '1';
